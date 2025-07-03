@@ -55,12 +55,33 @@ struct AddItemView: View {
                     Text("Due Date")
                 }
                 
-                Section("Smart Input (AI)") {
-                    VStack(alignment: .leading, spacing: 8) {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Text("Smart Input (AI)")
+                                .font(.headline)
+                            Text("BETA")
+                                .font(.caption2)
+                                .bold()
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.yellow.opacity(0.8))
+                                .foregroundColor(.black)
+                                .clipShape(Capsule())
+                        }
+                        Text("Type a task in plain English and let AI fill the form for you!")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                         TextField("e.g. Buy groceries tomorrow at 5pm, high priority", text: $smartInput)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                        HStack {
-                            Button(action: {
+                            .padding(10)
+                            .background(Color.gray.opacity(0.12))
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                            )
+                        HStack(spacing: 12) {
+                            Button {
                                 isParsingAI = true
                                 aiError = nil
                                 AIService.shared.parseTaskWithAI(input: smartInput) { parsed in
@@ -83,55 +104,52 @@ struct AddItemView: View {
                                             }
                                         }
                                         if parsedDate == nil, let human = parsed.humanReadableDueDate {
-                                            // Try common formats
-                                            let fmts = [
-                                                "MMMM d, yyyy 'at' h:mm a",
-                                                "MMMM d, yyyy h:mm a",
-                                                "MMM d, yyyy h:mm a",
-                                                "yyyy-MM-dd h:mm a",
-                                                "yyyy-MM-dd"
-                                            ]
-                                            let df = DateFormatter()
-                                            for fmt in fmts {
-                                                df.dateFormat = fmt
-                                                if let d = df.date(from: human) {
-                                                    parsedDate = d
-                                                    break
-                                                }
-                                            }
+                                            let fallbackFormatter = DateFormatter()
+                                            fallbackFormatter.dateStyle = .medium
+                                            fallbackFormatter.timeStyle = .short
+                                            fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                            parsedDate = fallbackFormatter.date(from: human)
                                         }
-                                        if let date = parsedDate {
-                                            dueDateValue = date
-                                            dueDate = date
+                                        if let parsedDate = parsedDate {
+                                            dueDate = parsedDate
+                                            dueDateValue = parsedDate
                                             showDatePicker = true
                                         } else if parsed.dueDate != nil || parsed.humanReadableDueDate != nil {
                                             aiError = "AI found a date but couldn't parse it. Please edit manually."
                                         }
-                                        if let prio = parsed.priority?.lowercased() {
-                                            switch prio {
-                                            case "high": priority = .high
-                                            case "medium": priority = .medium
-                                            case "low": priority = .low
-                                            default: break
-                                            }
+                                        if let parsedPriority = parsed.priority, let p = Priority(rawValue: parsedPriority.lowercased()) {
+                                            priority = p
+                                        }
+                                        if !parsed.title.isEmpty {
+                                            title = parsed.title
+                                        }
+                                        if let desc = parsed.humanReadableDueDate, itemDescription.isEmpty {
+                                            itemDescription = desc
                                         }
                                     }
                                 }
-                            }) {
+                            } label: {
                                 if isParsingAI {
                                     ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .purple))
+                                        .frame(width: 24, height: 24)
                                 } else {
-                                    Text("Parse with AI")
+                                    Label("Parse with AI", systemImage: "wand.and.stars")
+                                        .font(.body.bold())
                                 }
                             }
-                            .disabled(smartInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isParsingAI)
+                            .buttonStyle(.borderedProminent)
+                            .tint(.purple)
+                            .disabled(isParsingAI || smartInput.isEmpty)
                             if let aiError = aiError {
                                 Text(aiError)
-                                    .foregroundColor(.red)
                                     .font(.caption)
+                                    .foregroundColor(.red)
+                                    .lineLimit(2)
                             }
                         }
                     }
+                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("New Task")
