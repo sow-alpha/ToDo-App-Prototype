@@ -18,6 +18,9 @@ struct AddItemView: View {
     @State private var dueDate: Date? = nil
     @State private var dueDateValue = Date()
     @State private var showDatePicker = false
+    @State private var smartInput: String = ""
+    @State private var isParsingAI = false
+    @State private var aiError: String? = nil
     
     var body: some View {
         NavigationView {
@@ -50,6 +53,85 @@ struct AddItemView: View {
                     }
                 } header: {
                     Text("Due Date")
+                }
+                
+                Section("Smart Input (AI)") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("e.g. Buy groceries tomorrow at 5pm, high priority", text: $smartInput)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        HStack {
+                            Button(action: {
+                                isParsingAI = true
+                                aiError = nil
+                                AIService.shared.parseTaskWithAI(input: smartInput) { parsed in
+                                    DispatchQueue.main.async {
+                                        isParsingAI = false
+                                        guard let parsed = parsed else {
+                                            aiError = "Could not parse task. Try rephrasing."
+                                            return
+                                        }
+                                        title = parsed.title
+                                        var parsedDate: Date? = nil
+                                        if let due = parsed.dueDate {
+                                            let isoFormatter = ISO8601DateFormatter()
+                                            parsedDate = isoFormatter.date(from: due)
+                                            if parsedDate == nil {
+                                                let fallbackFormatter = DateFormatter()
+                                                fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+                                                fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                                parsedDate = fallbackFormatter.date(from: due)
+                                            }
+                                        }
+                                        if parsedDate == nil, let human = parsed.humanReadableDueDate {
+                                            // Try common formats
+                                            let fmts = [
+                                                "MMMM d, yyyy 'at' h:mm a",
+                                                "MMMM d, yyyy h:mm a",
+                                                "MMM d, yyyy h:mm a",
+                                                "yyyy-MM-dd h:mm a",
+                                                "yyyy-MM-dd"
+                                            ]
+                                            let df = DateFormatter()
+                                            for fmt in fmts {
+                                                df.dateFormat = fmt
+                                                if let d = df.date(from: human) {
+                                                    parsedDate = d
+                                                    break
+                                                }
+                                            }
+                                        }
+                                        if let date = parsedDate {
+                                            dueDateValue = date
+                                            dueDate = date
+                                            showDatePicker = true
+                                        } else if parsed.dueDate != nil || parsed.humanReadableDueDate != nil {
+                                            aiError = "AI found a date but couldn't parse it. Please edit manually."
+                                        }
+                                        if let prio = parsed.priority?.lowercased() {
+                                            switch prio {
+                                            case "high": priority = .high
+                                            case "medium": priority = .medium
+                                            case "low": priority = .low
+                                            default: break
+                                            }
+                                        }
+                                    }
+                                }
+                            }) {
+                                if isParsingAI {
+                                    ProgressView()
+                                } else {
+                                    Text("Parse with AI")
+                                }
+                            }
+                            .disabled(smartInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isParsingAI)
+                            if let aiError = aiError {
+                                Text(aiError)
+                                    .foregroundColor(.red)
+                                    .font(.caption)
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("New Task")
