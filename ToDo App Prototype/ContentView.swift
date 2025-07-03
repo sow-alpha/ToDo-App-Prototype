@@ -122,7 +122,7 @@ struct PrioritySection: View {
             HStack {
                 Image(systemName: priority.icon)
                     .foregroundColor(Color(priority.color))
-                    .font(.system(size: 16))
+                    .font(.system(size: 20, weight: .semibold))
                 
                 Text("\(priority.displayName) Priority")
                     .font(.headline)
@@ -196,6 +196,11 @@ struct ItemRow: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
+                if let due = item.dueDate {
+                    Text("Due: \(due, formatter: dateFormatter)")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
             }
             
             Spacer()
@@ -231,6 +236,12 @@ struct ItemRow: View {
             modelContext.delete(item)
             try? modelContext.save()
         }
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
     }
 }
 

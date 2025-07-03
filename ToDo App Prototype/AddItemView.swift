@@ -15,6 +15,9 @@ struct AddItemView: View {
     @State private var title: String = ""
     @State private var itemDescription: String = ""
     @State private var priority: Priority = .medium
+    @State private var dueDate: Date? = nil
+    @State private var dueDateValue = Date()
+    @State private var showDatePicker = false
     
     var body: some View {
         NavigationView {
@@ -31,15 +34,22 @@ struct AddItemView: View {
                 Section("Priority") {
                     Picker("Priority", selection: $priority) {
                         ForEach(Priority.allCases, id: \.self) { priority in
-                            HStack {
-                                Image(systemName: priority.icon)
-                                    .foregroundColor(Color(priority.color))
-                                Text(priority.displayName)
-                            }
-                            .tag(priority)
+                            Text(priority.displayName)
+                                .tag(priority)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
+                }
+                Section {
+                    Toggle(isOn: $showDatePicker) {
+                        Text(dueDate != nil ? "Due: \(dueDate!, formatter: dateFormatter)" : "Set Due Date")
+                    }
+                    if showDatePicker {
+                        DatePicker("Select Due Date", selection: $dueDateValue, displayedComponents: .date)
+                            .datePickerStyle(GraphicalDatePickerStyle())
+                    }
+                } header: {
+                    Text("Due Date")
                 }
             }
             .navigationTitle("New Task")
@@ -53,7 +63,8 @@ struct AddItemView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
-                        addItem()
+                        let finalDueDate = showDatePicker ? dueDateValue : nil
+                        addItem(dueDate: finalDueDate)
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -62,16 +73,23 @@ struct AddItemView: View {
         }
     }
     
-    private func addItem() {
+    private func addItem(dueDate: Date?) {
         let newItem = Item(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
             completed: false,
-            itemDescription: itemDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            itemDescription: itemDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+            dueDate: dueDate
         )
         
         modelContext.insert(newItem)
         try? modelContext.save()
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
     }
 }
 

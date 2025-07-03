@@ -24,8 +24,8 @@ enum Priority: String, CaseIterable, Codable {
     var color: String {
         switch self {
         case .high: return "red"
-        case .medium: return "indigo"
-        case .low: return "blue"
+        case .medium: return "orange"
+        case .low: return "green"
         }
     }
     
@@ -45,12 +45,14 @@ final class Item {
     var completed: Bool
     var itemDescription: String
     var timestamp: Date
+    var dueDate: Date?
     
-    init(title: String, priority: Priority = .medium, completed: Bool = false, itemDescription: String = "", timestamp: Date = Date()) {
+    init(title: String, priority: Priority = .medium, completed: Bool = false, itemDescription: String = "", timestamp: Date = Date(), dueDate: Date? = nil) {
         self.title = title
         self.priority = priority
         self.completed = completed
         self.itemDescription = itemDescription
         self.timestamp = timestamp
+        self.dueDate = dueDate
     }
 }
