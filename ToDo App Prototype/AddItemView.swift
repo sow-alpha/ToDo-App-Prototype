@@ -45,7 +45,7 @@ struct AddItemView: View {
                         Text(dueDate != nil ? "Due: \(dueDate!, formatter: dateFormatter)" : "Set Due Date")
                     }
                     if showDatePicker {
-                        DatePicker("Select Due Date", selection: $dueDateValue, displayedComponents: .date)
+                        DatePicker("Select Due Date & Time", selection: $dueDateValue, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(GraphicalDatePickerStyle())
                     }
                 } header: {
@@ -89,6 +89,7 @@ struct AddItemView: View {
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
+        formatter.timeStyle = .short
         return formatter
     }
 }
